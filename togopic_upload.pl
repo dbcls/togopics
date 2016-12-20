@@ -38,9 +38,6 @@ my $file = 'TogoPics.csv';
 # $HTTP::Request::Common::DYNAMIC_FILE_UPLOAD = 1;
 
 my $browser;
-my $edit_token;
-my ($username, $password);
-
 my $ua = "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:22.0) Gecko/20100101 Firefox/22.0";
 my $api_url = "https://commons.wikimedia.org/w/api.php";
 my $author = "DataBase Center for Life Science (DBCLS)";
@@ -64,6 +61,7 @@ sub downloadImage {
 }
 
 sub getAccountInfo {
+    my ($username, $password);
     print "Enter your username: ";
     $username = <STDIN>;
     print "Enter your password: ";
@@ -72,6 +70,7 @@ sub getAccountInfo {
     ReadMode('normal');
     chomp ($username, $password);
     print "\n";
+    return [$username, $password];
 }
 
 sub initBrowser {
@@ -83,6 +82,7 @@ sub initBrowser {
 }
 
 sub loginAndGetToken {
+    my $userinfo = &getAccountInfo;
     my $token = "";
     my $response = $browser->post(
 	$api_url,
@@ -90,8 +90,8 @@ sub loginAndGetToken {
 	Content_Encoding => "utf-8",
 	Content => [
 	    "action"     => "login",
-	    "lgname"     => $username,
-	    "lgpassword" => $password,
+	    "lgname"     => $userinfo->[0],
+	    "lgpassword" => $userinfo->[1],
 	    "format"     => "json",
 	]);
     if( $response->is_success ){
@@ -107,8 +107,8 @@ sub loginAndGetToken {
 	Content_Encoding => "utf-8",
 	Content=> [
 	    "action"     => "login",
-	    "lgname"     => $username,
-	    "lgpassword" => $password,
+	    "lgname"     => $userinfo->[0],
+	    "lgpassword" => $userinfo->[1],
 	    "lgtoken"    => $token,
 	    "format"     => "json",
 	]);
@@ -136,7 +136,7 @@ sub loginAndGetToken {
     $response = $browser->get($url);
     if( $response->is_success ){
 	my $res_ref = decode_json $response->content;
-	$edit_token = $res_ref->{"query"}->{"tokens"}->{"csrftoken"};
+	return $res_ref->{"query"}->{"tokens"}->{"csrftoken"};
     }else{
 	die "Get error: $!\n";
     }
@@ -218,7 +218,7 @@ sub uploadFile {
 	    "filename" => $original_png,
 	    "file"     => ["$current_name"],
 	    #"url"     => $source,
-	    "token"    => $edit_token,
+	    "token"    => $p->{"token"},
 	    "text"     => encode_utf8($metadata),
 	    "format"   => "json",
 	]);
@@ -244,9 +244,8 @@ sub uploadFile {
 
 sub main {
 
-    &getAccountInfo;
     &initBrowser;
-    &loginAndGetToken;
+    my $edit_token = &loginAndGetToken;
 
     open(my $data, '<:utf8', $file);
     <$data>;
@@ -273,6 +272,7 @@ sub main {
 
 	    uploadFile(
 		{
+		    "token"        => $edit_token,
 		    "date"         => $date,
 		    "description"  => $description,
 		    "current_name" => $current_name,
