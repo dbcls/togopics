@@ -75,8 +75,7 @@ sub getAccountInfo {
 }
 
 sub initBrowser {
-    $browser = LWP::UserAgent->new();
-    $browser->agent( 'Mozilla/5.0 (X11; U; Linux x86_64; en-US; rv:1.9.0.10) Gecko/2009042700 Firefox/3.0.10' );
+    $browser = LWP::UserAgent->new( agent => $ua );
     $browser->default_header( 'Accept-Language' => 'en-US' );
     $browser->default_header( 'Accept-Charset' => 'iso-8859-1,*,utf-8' );
     $browser->default_header( 'Accept' => '*/*' );
