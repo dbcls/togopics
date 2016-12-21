@@ -27,6 +27,7 @@ use Term::ReadKey;
 use HTTP::Request::Common;
 use JSON::XS;
 use FindBin qw($Bin);
+use Text::Trim;
 
 binmode STDOUT, ":utf8";
 binmode STDERR, ":utf8";
@@ -148,7 +149,7 @@ sub uploadFile {
 
     open (my $log, ">>", "log.txt");
 
-    my $full_description = "\n{{". $p->{"description"}. "}}";
+    my $full_description = $p->{"description"};
 
 # Categories: Combining all categories as one master category
     my $mastercategory="[[Category:". $p->{"category_1"}. "]]";
@@ -203,7 +204,6 @@ sub uploadFile {
 
     my $description = $p->{"description"};
     my $current_name = $p->{"current_name"};
-    my $original_png = $p->{"original_png"};
 
     print "Uploading $current_name to the Wikimedia Commons. \nDescription: ";
     print $description, "\n";
@@ -215,7 +215,7 @@ sub uploadFile {
 	Content_Encoding => "utf-8",
 	Content => [
 	    "action"   => "upload",
-	    "filename" => $original_png,
+	    "filename" => $p->{"original_png"},
 	    "file"     => ["$current_name"],
 	    #"url"     => $source,
 	    "token"    => $p->{"token"},
@@ -251,6 +251,7 @@ sub main {
     <$data>;
     while (<$data>) {
 	chomp;
+	trim($_);
 	if ($csv->parse($_)) {
 	    my ($picture_id, $togopic_id, $taxicon_id, $update, $doi, $date,
 		$title_jp, $title_en, $scientific_name, $tax_id, $tag, $original_png,
@@ -269,6 +270,7 @@ sub main {
 	    next if downloadImage($original_png);
 	    my $current_name = $image_dir. '/'. $original_png;
 	    my $source = $togopic_root. $doi. ".html";
+	    my $other_info = length($tax_id) > 0 ? "Tax ID:". $tax_id : "";
 
 	    uploadFile(
 		{
@@ -283,7 +285,7 @@ sub main {
 		    "category_3"   => "",
 		    "category_4"   => "",
 		    "category_5"   => "",
-		    "other_information" => "",
+		    "other_information" => $other_info,
 		    "other_version1"    => "",
 		    "other_version2"    => "",
 		});
