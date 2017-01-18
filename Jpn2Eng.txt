@@ -1,0 +1,60 @@
+アブラナ目:Brassicales
+イネ目:Poales
+ウシ目:Artiodactyla
+クジラ目:Cetacea
+ネコ目:Carnivora
+バシラス綱:Bacilli
+フィルミクテス門:Firmicutes
+プロテオバクテリア門:Proteobacteria
+モデル生物:model organism
+γプロテオバクテリア綱:Gammaproteobacteria
+海綿動物門:Porifera
+活用事例:use case
+環形動物門:Annelida
+緩歩動物門:Tardigrada
+魚上綱:Pisces
+恐竜上目・翼竜上目:Dinosauria
+襟鞭毛虫綱:Choanoflagellatea
+襟鞭毛虫門:Choanoflagellata
+顕微鏡:microscope
+原獣亜綱:Prototheria
+後獣下綱:Metatheria
+昆虫綱:Insecta
+細胞:cell
+刺胞動物門:Cnidaria
+子嚢菌門:Ascomycota
+次世代シーケンサー:next-generation sequencer
+実験器具:Laboratory instruments
+実験装置:Experimental devices
+獣亜綱:Theria
+真獣下綱:Eutheria
+生物アイコン:biological icon
+脊索動物門:Chordata
+脊椎動物亜門:Vertebrata
+節足動物門:Arthropoda
+線形動物門:Nematoda
+繊毛虫門:Ciliophora
+臓器:organ
+腸内細菌目:Enterobacteriales
+鳥綱:Aves
+珍渦虫動物門:Xenoturbellida
+頭足綱:Cephalopoda
+軟体動物門:Mollusca
+半索動物門:Hemichordata
+被子植物門:Magnoliophyta
+尾索動物亜門・頭索動物亜門:Urochordata
+貧膜口綱:Oligohymenophorea
+平板動物門:Placozoa
+未分類:unclassified
+無顎上綱:Agnatha
+模式図:schema
+有櫛動物門:Ctenophora
+藍色細菌門:Cyanobacteria
+両生綱:Amphibia
+緑藻綱:Chlorophyceae
+緑藻植物門:Chlorophyta
+霊長目:primate
+哺乳綱:Mammalia
+扁形動物門:Platyhelminthes
+棘皮動物門:Echinodermata
+爬虫綱:Reptilia
