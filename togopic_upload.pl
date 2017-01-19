@@ -45,8 +45,19 @@ my $author = "DataBase Center for Life Science (DBCLS)";
 my $togopic_root = "http://togotv.dbcls.jp/ja/";
 my $togopicpng_root = "http://togotv.dbcls.jp/pic/";
 my $licence = "{{cc-by-4.0}}";
+my %j2e;
 
 &main;
+
+sub setupJEdictionary {
+    open(my $dic, "<:utf8", $Bin."/Jpn2Eng.txt");
+    while(<$dic>){
+        chomp;
+	my ($j, $e) = split /:/;
+	$j2e{$j} = $e;
+    }
+    close($dic);
+}
 
 sub downloadImage {
     my $lwp = LWP::UserAgent->new( agent => $ua );
@@ -151,20 +162,8 @@ sub uploadFile {
 
     my $full_description = $p->{"description"};
 
-# Categories: Combining all categories as one master category
-    my $mastercategory="[[Category:". $p->{"category_1"}. "]]";
-    if ($p->{"category_2"} ne ""){
-	$mastercategory.="\n[[Category:". $p->{"category_2"}. "]]" ;
-    }
-    if ($p->{"category_3"} ne ""){
-	$mastercategory.="\n[[Category:". $p->{"category_3"}. "]]" ;
-    }
-    if ($p->{"category_4"} ne ""){
-	$mastercategory.="\n[[Category:". $p->{"category_4"}. "]]" ;
-    }
-    if ($p->{"category_5"} ne ""){
-	$mastercategory.="\n[[Category:". $p->{"category_5"}. "]]" ;
-    }
+    my $mastercategory = join("\n", map {"[[Category:$_]]"} @{$p->{tags}});
+
     $mastercategory .= "\n\n";
 
 #Other versions
@@ -191,7 +190,6 @@ sub uploadFile {
 	);
     my $information = "\n== Summary ==\n\n";
     $information .= "{{". join("| ", @templates). "}}\n";
-    print ">", $information, "\n";
 
 # Begin optional template integration
     my $metadata = $information;
@@ -201,6 +199,8 @@ sub uploadFile {
 
 # Integrating remaining templates into one 
     $metadata .="\n== [[Commons:Copyright tags|Licensing]] ==\n$licence\n\n\n$mastercategory\n\n";
+
+    print "Metadata\n$metadata";
 
     my $description = $p->{"description"};
     my $current_name = $p->{"current_name"};
@@ -244,6 +244,7 @@ sub uploadFile {
 
 sub main {
 
+    &setupJEdictionary;
     &initBrowser;
     my $edit_token = &loginAndGetToken;
 
@@ -271,6 +272,12 @@ sub main {
 	    my $current_name = $image_dir. '/'. $original_png;
 	    my $source = $togopic_root. $doi. ".html";
 	    my $other_info = length($tax_id) > 0 ? "Tax ID:". $tax_id : "";
+	    print "+++++\n";
+	    print $tag, "\n";
+	    my @tags = map {$j2e{$_}} grep {$j2e{$_}} split /,/, $tag;
+	    unshift @tags, "Biology";
+	    print "Tags:", join(":", @tags), "\n";
+	    print "+++++\n";
 
 	    uploadFile(
 		{
@@ -280,11 +287,7 @@ sub main {
 		    "current_name" => $current_name,
 		    "source"       => $source,
 		    "original_png" => $original_png,
-		    "category_1"   => "Biology",
-		    "category_2"   => "",
-		    "category_3"   => "",
-		    "category_4"   => "",
-		    "category_5"   => "",
+		    "tags"         => \@tags,
 		    "other_information" => $other_info,
 		    "other_version1"    => "",
 		    "other_version2"    => "",
