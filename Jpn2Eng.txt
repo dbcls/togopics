@@ -6,7 +6,7 @@
 バシラス綱:Bacilli
 フィルミクテス門:Firmicutes
 プロテオバクテリア門:Proteobacteria
-モデル生物:model organism
+モデル生物:Model organisms
 γプロテオバクテリア綱:Gammaproteobacteria
 海綿動物門:Porifera
 活用事例:use case
@@ -34,7 +34,7 @@
 節足動物門:Arthropoda
 線形動物門:Nematoda
 繊毛虫門:Ciliophora
-臓器:organ
+臓器:Anatomy
 腸内細菌目:Enterobacteriales
 鳥綱:Aves
 珍渦虫動物門:Xenoturbellida

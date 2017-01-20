@@ -272,12 +272,15 @@ sub main {
 	    my $current_name = $image_dir. '/'. $original_png;
 	    my $source = $togopic_root. $doi. ".html";
 	    my $other_info = length($tax_id) > 0 ? "Tax ID:". $tax_id : "";
-	    print "+++++\n";
-	    print $tag, "\n";
 	    my @tags = map {$j2e{$_}} grep {$j2e{$_}} split /,/, $tag;
 	    unshift @tags, "Biology";
-	    print "Tags:", join(":", @tags), "\n";
-	    print "+++++\n";
+	    push @tags, $scientific_name if $scientific_name && $scientific_name ne "-";
+	    if($tag eq "臓器"){
+		(my $another_category = $title_en) =~ s/^([a-z])/uc($1)/e;
+		$another_category =~ y/ /_/;
+		$another_category =~ s/_?\(.*$//;
+		push @tags, $another_category;
+	    }
 
 	    uploadFile(
 		{
