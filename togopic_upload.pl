@@ -198,7 +198,7 @@ sub uploadFile {
     };
 
 # Integrating remaining templates into one 
-    $metadata .="\n== [[Commons:Copyright tags|Licensing]] ==\n$licence\n\n\n$mastercategory\n\n";
+    $metadata .="\n== [[Commons:Copyright tags|Licensing]] ==\n$licence\n{{LicenseReview}}\n\n$mastercategory\n\n";
 
     print "Metadata\n$metadata";
 
@@ -259,6 +259,7 @@ sub main {
 		$original_svg, $original_ai, $DatabaseArchiveURL) = $csv->fields();       
 
 	    next unless $picture_id;
+	    $togopic_id ||= 0;
 	    $doi //= "";
 	    $date //= "";
 	    $title_jp //= "";
