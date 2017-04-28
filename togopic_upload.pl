@@ -215,7 +215,7 @@ sub uploadFile {
 	Content_Encoding => "utf-8",
 	Content => [
 	    "action"   => "upload",
-	    "filename" => $p->{"original_png"},
+	    "filename" => $p->{"original_svg"},
 	    "file"     => ["$current_name"],
 	    #"url"     => $source,
 	    "token"    => $p->{"token"},
@@ -260,6 +260,8 @@ sub main {
 
 	    next unless $picture_id;
 	    $togopic_id ||= 0;
+	    $taxicon_id ||= 0;
+	    next if $taxicon_id > 0;
 	    $doi //= "";
 	    $date //= "";
 	    $title_jp //= "";
@@ -268,9 +270,10 @@ sub main {
 	    $tax_id //= "";
 	    $tag //= "";
 	    $original_png //= "";
+	    $original_svg //= "";
 	    my $description = "{{en|$title_en}}{{ja|$title_jp}}";
-	    next if downloadImage($original_png);
-	    my $current_name = $image_dir. '/'. $original_png;
+	    next if downloadImage($original_svg);
+	    my $current_name = $image_dir. '/'. $original_svg;
 	    my $source = $togopic_root. $doi. ".html";
 	    my $other_info = length($tax_id) > 0 ? "Tax ID:". $tax_id : "";
 	    my @tags = map {$j2e{$_}} grep {$j2e{$_}} split /,/, $tag;
@@ -282,6 +285,11 @@ sub main {
 		$another_category =~ s/_?\(.*$//;
 		push @tags, $another_category;
 	    }
+	    if($taxicon_id > 0){
+		push @tags, "Taxonomy icons by NBDC";
+	    }elsif($togopic_id > 0){
+		push @tags, "Life science images from DBCLS";
+	    }
 
 	    uploadFile(
 		{
@@ -290,7 +298,7 @@ sub main {
 		    "description"  => $description,
 		    "current_name" => $current_name,
 		    "source"       => $source,
-		    "original_png" => $original_png,
+		    "original_svg" => $original_svg,
 		    "tags"         => \@tags,
 		    "other_information" => $other_info,
 		    "other_version1"    => "",
