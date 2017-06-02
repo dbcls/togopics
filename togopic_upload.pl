@@ -43,7 +43,8 @@ my $ua = "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:22.0) Gecko/20100101 Firefo
 my $api_url = "https://commons.wikimedia.org/w/api.php";
 my $author = "DataBase Center for Life Science (DBCLS)";
 my $togopic_root = "http://togotv.dbcls.jp/ja/";
-my $togopicpng_root = "http://togotv.dbcls.jp/pic/";
+my $togopicpng_root = "ftp://ftp.biosciencedbc.jp/archive/togo-pic/image/";
+#my $togopicpng_root = "http://togotv.dbcls.jp/pic/";
 my $licence = "{{cc-by-4.0}}";
 my %j2e;
 
