@@ -32,6 +32,7 @@ use Text::Trim;
 binmode STDOUT, ":utf8";
 binmode STDERR, ":utf8";
 
+my %not_upload = map {$_ => 1} qw/513 514/;
 my $image_dir = "$Bin/image_files";
 my $csv = Text::CSV_XS->new({ binary => 1 });
 my $file = 'TogoPics.csv';
@@ -43,7 +44,7 @@ my $ua = "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:22.0) Gecko/20100101 Firefo
 my $api_url = "https://commons.wikimedia.org/w/api.php";
 my $author = "DataBase Center for Life Science (DBCLS)";
 my $togopic_root = "http://togotv.dbcls.jp/ja/";
-my $togopicpng_root = "ftp://ftp.biosciencedbc.jp/archive/togo-pic/image/";
+my $togopicpng_root = 'ftp://ftp.biosciencedbc.jp/archive/togo-pic/image/';
 #my $togopicpng_root = "http://togotv.dbcls.jp/pic/";
 my $licence = "{{cc-by-4.0}}";
 my %j2e;
@@ -62,6 +63,7 @@ sub setupJEdictionary {
 
 sub downloadImage {
     my $lwp = LWP::UserAgent->new( agent => $ua );
+    #$lwp->credentials("ftp.biosciencedbc.jp:21", "", "", '');
     my $res = $lwp->get( $togopicpng_root. $_[0], ':content_file' => $image_dir. "/". $_[0] );
 
     if ( $res->is_success ) {
@@ -252,6 +254,7 @@ sub main {
     open(my $data, '<:utf8', $file);
     <$data>;
     while (<$data>) {
+	next if /^#/;
 	chomp;
 	trim($_);
 	if ($csv->parse($_)) {
@@ -260,6 +263,7 @@ sub main {
 		$original_svg, $original_ai, $DatabaseArchiveURL) = $csv->fields();       
 
 	    next unless $picture_id;
+	    next if $not_upload{$picture_id};
 	    $togopic_id ||= 0;
 	    $taxicon_id ||= 0;
 	    next if $taxicon_id > 0;
