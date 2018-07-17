@@ -36,6 +36,7 @@ my %not_upload = map {$_ => 1} qw/513 514/;
 my $image_dir = "$Bin/image_files";
 my $csv = Text::CSV_XS->new({ binary => 1 });
 my $file = 'TogoPics.csv';
+#my $file = 'TogoPicsWorks-Pictures.csv';
 
 # $HTTP::Request::Common::DYNAMIC_FILE_UPLOAD = 1;
 
