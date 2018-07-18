@@ -9,7 +9,7 @@ import unicodecsv as csv
 
 #sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
 
-scope = ['https://spreadsheets.google.com/feeds']
+scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
 creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json', scope)
 client = gspread.authorize(creds)
 sheet = client.open(u"統合TV番組原簿 20150701").worksheet("Pictures")

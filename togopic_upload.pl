@@ -21,6 +21,7 @@ use Fatal qw/open/;
 use utf8; 
 use LWP::UserAgent;
 use LWP::Protocol::https;
+use Net::FTP;
 use Encode;
 use Text::CSV_XS;
 use Term::ReadKey;
@@ -36,7 +37,6 @@ my %not_upload = map {$_ => 1} qw/513 514/;
 my $image_dir = "$Bin/image_files";
 my $csv = Text::CSV_XS->new({ binary => 1 });
 my $file = 'TogoPics.csv';
-#my $file = 'TogoPicsWorks-Pictures.csv';
 
 # $HTTP::Request::Common::DYNAMIC_FILE_UPLOAD = 1;
 
@@ -45,8 +45,8 @@ my $ua = "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:22.0) Gecko/20100101 Firefo
 my $api_url = "https://commons.wikimedia.org/w/api.php";
 my $author = "DataBase Center for Life Science (DBCLS)";
 my $togopic_root = "http://togotv.dbcls.jp/ja/";
-my $togopicpng_root = 'ftp://ftp.biosciencedbc.jp/archive/togo-pic/image/';
-#my $togopicpng_root = "http://togotv.dbcls.jp/pic/";
+my $togopic_ftphost = 'ftp.biosciencedbc.jp';
+my $togopic_ftppath = '/archive/togo-pic/image';
 my $licence = "{{cc-by-4.0}}";
 my %j2e;
 
@@ -63,16 +63,28 @@ sub setupJEdictionary {
 }
 
 sub downloadImage {
-    my $lwp = LWP::UserAgent->new( agent => $ua );
-    #$lwp->credentials("ftp.biosciencedbc.jp:21", "", "", '');
-    my $res = $lwp->get( $togopicpng_root. $_[0], ':content_file' => $image_dir. "/". $_[0] );
-
-    if ( $res->is_success ) {
-	print ">", $image_dir."/".$_[0], "\n";
-    } else {
-	print "Error. $!: ${togopicpng_root}$_[0] -> ${image_dir}/$_[0]\n";
+    my $ftp;
+    unless($ftp = Net::FTP->new($togopic_ftphost, Debug => 0, Passive => 1)){
+	print "Cannot connect to $togopic_ftphost: $@";
+	$ftp->quit;
 	return 1;
     }
+    unless($ftp->login("anonymous",'-anonymous@')){
+	print "Cannot login ", $ftp->message;
+	$ftp->quit;
+	return 1;
+    }
+    unless($ftp->cwd($togopic_ftppath)){
+	print "Cannot change working directory ", $ftp->message;
+	$ftp->quit;
+	return 1;
+    }
+    unless($ftp->get($_[0], $image_dir. "/". $_[0])){
+	print "get failed ", $ftp->message;
+	$ftp->quit;
+	return 1;
+    }
+    $ftp->quit;
     return 0;
 }
 
