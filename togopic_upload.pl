@@ -70,17 +70,17 @@ sub downloadImage {
 	return 1;
     }
     unless($ftp->login("anonymous",'-anonymous@')){
-	print "Cannot login ", $ftp->message;
+	print "Cannot login: ", $ftp->message;
 	$ftp->quit;
 	return 1;
     }
     unless($ftp->cwd($togopic_ftppath)){
-	print "Cannot change working directory ", $ftp->message;
+	print "Cannot change working directory: ", $ftp->message;
 	$ftp->quit;
 	return 1;
     }
     unless($ftp->get($_[0], $image_dir. "/". $_[0])){
-	print "get failed ", $ftp->message;
+	print "get failed ($_[0]): ", $ftp->message;
 	$ftp->quit;
 	return 1;
     }
@@ -277,6 +277,10 @@ sub main {
 
 	    next unless $picture_id;
 	    next if $not_upload{$picture_id};
+	    unless($original_svg){
+		warn "No svg file for the ID: ${picture_id}\n";
+		next;
+	    }
 	    $togopic_id ||= 0;
 	    $taxicon_id ||= 0;
 	    next if $taxicon_id > 0;
@@ -288,7 +292,6 @@ sub main {
 	    $tax_id //= "";
 	    $tag //= "";
 	    $original_png //= "";
-	    $original_svg //= "";
 	    my $description = "{{en|$title_en}}{{ja|$title_jp}}";
 	    next if downloadImage($original_svg);
 	    my $current_name = $image_dir. '/'. $original_svg;
