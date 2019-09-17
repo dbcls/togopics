@@ -170,6 +170,81 @@ sub loginAndGetToken {
     }
 }
 
+sub getEntityID {
+    my $fn = shift;
+    $fn = "File:".$fn;
+    my $url = URI->new( $api_url );
+    $url->query_form(
+	"action" => "wbgetentities",
+	"sites"  => "commonswiki",
+	"titles" => $fn, # eg "File:201703_tardigrade.svg"
+	"format" => "json",
+	);
+    my $response = $browser->get($url);
+    if( $response->is_success ){
+	my $res_ref = decode_json $response->content;
+	my $eid = [ keys %{$res_ref->{"entities"}} ]->[0];
+	return $eid;
+    }else{
+	return "";
+    }
+}
+
+sub setClaims {
+    my $eid = shift;
+    my $qid = shift;
+    my $edit_token = shift;
+    my $url = URI->new( $api_url );
+    my $response = $browser->post(
+	$url,
+	Content_Type     => "multipart/form-data",
+	Content_Encoding => "utf-8",
+	Content => [
+	    "action"   => "wbcreateclaim",
+	    "entity"   => $eid,
+	    "property" => "P180",
+	    "snaktype" => "value",
+	    "value"    => '{"entity-type":"item","numeric-id":$qid,"id":"Q${qid}"}',
+	    "summary"  => "Added structured data.",
+	    "token"    => $edit_token,
+	    "format"   => "json",
+	]);
+    if( $response->is_success ){
+        my $res_ref = decode_json $response->content;
+        print "setClaims:$qid\n";
+    }else{
+	die "Post error: $!\n";
+    }
+}
+
+sub setLabel {
+    my $title = shift;
+    my $label = shift;
+    my $lang = shift;
+    my $edit_token = shift;
+    my $url = URI->new( $api_url );
+    my $response = $browser->post(
+	$url,
+	Content_Type     => "multipart/form-data",
+	Content_Encoding => "utf-8",
+	Content => [
+	    "action"   => "wbsetlabel",
+	    "site"     => "commonswiki",
+	    "title"    => "File:".$title,
+	    "value"    => $label,
+	    "language" => $lang,
+	    "summary"  => "Added a label (".$lang.").",
+	    "token"    => $edit_token,
+	    "format"   => "json",
+	]);
+    if( $response->is_success ){
+        my $res_ref = decode_json $response->content;
+	print "setLabel:",decode_utf8($label), "\n";
+    }else{
+	die "Post error: $!\n";
+    }
+}
+
 sub uploadFile {
 
     my $p = shift;
@@ -325,6 +400,9 @@ sub main {
 		    "other_version1"    => "",
 		    "other_version2"    => "",
 		});
+
+	    setLabel($original_svg, $title_en, "en", $edit_token);
+	    setLabel($original_svg, encode_utf8($title_jp), "ja", $edit_token);
 
 	} else {
 	    warn "Parse error: $_\n";
