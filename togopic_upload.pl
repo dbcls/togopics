@@ -13,6 +13,7 @@ Acknowledgements:
     This script uses parts of the upload.pl rev. 1.3.2 developed by Nicholas:~ Wikipedia: [[en:User:Nichalp]],
     which is published under the GPLv3 licence.
 
+このファイルはUTF-8エンコードされた文字を含みます。
 =cut
 
 use strict;
@@ -29,6 +30,9 @@ use HTTP::Request::Common;
 use JSON::XS;
 use FindBin qw($Bin);
 use Text::Trim;
+use RDF::Trine::Store::SPARQL;
+use Data::Dumper;
+use constant EP => "https://query.wikidata.org/sparql";
 
 binmode STDOUT, ":utf8";
 binmode STDERR, ":utf8";
@@ -190,10 +194,59 @@ sub getEntityID {
     }
 }
 
+
+# https://commons.wikimedia.org/w/api.php?action=wbgetclaims&entity=M57116616
+sub getClaims {
+    my $eid = shift;
+    my $url = URI->new( $api_url );
+    $url->query_form(
+	"action" => "wbgetclaims",
+	"entity" => $eid,
+	"format" => "json",
+	);
+    my $response = $browser->get($url);
+    if( $response->is_success ){
+	my $res_ref = decode_json $response->content;
+	if (my $claims = $res_ref->{'claims'}){
+	    return $claims;
+	}elsif (defined($res_ref->{'error'})){
+	    return "";
+	}
+    }else{
+	return "";
+    }
+}
+
+sub existClaim {
+    my $eid = shift;
+    my $pid = shift;
+    my $qid = shift;
+    my $claims = getClaims($eid);
+    while(my ($k, $v) = each %$claims){
+	next if $k ne $pid;
+	for my $value ( @{ $claims->{$k} } ){
+	    if($value->{'mainsnak'}->{'datavalue'}->{'value'}->{'id'} eq $qid){
+		return 1;
+	    }
+	}
+    }
+    return 0;
+}
+
 sub setClaims {
     my $eid = shift;
     my $qid = shift;
     my $edit_token = shift;
+    if( existClaim($eid, "P180", $qid) > 0){
+	print "Already stated: ", join("\t", ($eid, "P180", $qid)), "\n";
+	return;
+    }
+    $qid =~ s/^Q//;
+    my $value = encode_json {
+	"entity-type" => "item",
+	"numeric-id" => $qid,
+	"id" => "Q${qid}"
+    };
     my $url = URI->new( $api_url );
     my $response = $browser->post(
 	$url,
@@ -204,14 +257,20 @@ sub setClaims {
 	    "entity"   => $eid,
 	    "property" => "P180",
 	    "snaktype" => "value",
-	    "value"    => '{"entity-type":"item","numeric-id":$qid,"id":"Q${qid}"}',
+	    "value"    => $value,
 	    "summary"  => "Added structured data.",
 	    "token"    => $edit_token,
 	    "format"   => "json",
 	]);
     if( $response->is_success ){
         my $res_ref = decode_json $response->content;
-        print "setClaims:$qid\n";
+	if ($res_ref->{'success'}){
+	    print "setClaims [${eid}]: Q${qid}\n";
+	}elsif( defined($res_ref->{'error'}) ){
+	    print "Error [$eid]: ", $res_ref->{'error'}->{'info'}, "\n";
+	}else{
+	    print Dumper $res_ref, "\n";
+	}
     }else{
 	die "Post error: $!\n";
     }
@@ -243,6 +302,20 @@ sub setLabel {
     }else{
 	die "Post error: $!\n";
     }
+}
+
+sub getTaxQid {
+    my $taxid = shift;
+    my $qid = "";
+    my $wd = RDF::Trine::Store::SPARQL->new( EP );
+    my $query = 'SELECT ?____ ?QID WHERE { ?____ wdt:P685 ?NCBI_Taxonomy_ID.  BIND("'
+                . $taxid
+                . '" AS ?NCBI_Taxonomy_ID) BIND(SUBSTR(STR(?____), 32 ) AS ?QID) }';
+    my $iterator = $wd->get_sparql( $query );
+    if(my $row = $iterator->next) {
+        $qid = $row->{ 'QID' }->value;
+    }
+    return $qid;
 }
 
 sub uploadFile {
@@ -318,10 +391,10 @@ sub uploadFile {
         my $res_ref = decode_json $response->content;
         print "Upload:", $res_ref->{"upload"}->{"result"}, "\n";
         if($res_ref->{"upload"}->{"result"} eq "Success"){
-            print "Uploaded successfully.\n";
-            print $log encode_utf8("Image:$current_name|$description\n");
-            print $response->content, "\n";
-            print $log $response->content, "\n";
+	    print "Uploaded successfully.\n";
+	    print $log encode_utf8("Image:$current_name|$description\n");
+	    print $response->content, "\n";
+	    print $log $response->content, "\n";
         } else {
             print "Upload failed! Output was:\n";
             print $response->content, "\n";
@@ -331,6 +404,81 @@ sub uploadFile {
     }
 
     close($log);
+}
+
+sub csv_parse_and_upload {
+    my $edit_token = shift;
+    my $csv = shift;
+    my ($picture_id, $togopic_id, $taxicon_id, $update, $doi, $date,
+	$title_jp, $title_en, $scientific_name, $tax_id, $tag, $original_png,
+	$original_svg, $original_ai, $DatabaseArchiveURL) = $csv->fields();       
+
+    return 0 unless $picture_id;
+    return 0 if $not_upload{$picture_id};
+    unless($original_svg){
+	warn "No svg file for the ID: ${picture_id}\n";
+	return 0;
+    }
+
+    $togopic_id ||= 0;
+    $taxicon_id ||= 0;
+    return 0 if $taxicon_id > 0;
+    $doi //= "";
+    $date //= "";
+    $title_jp //= "";
+    $title_en //= "";
+    $scientific_name //= "";
+    $tax_id //= "";
+    $tag //= "";
+    $original_png //= "";
+    my $description = "{{en|$title_en}}{{ja|$title_jp}}";
+    return 0 if downloadImage($original_svg);
+    my $current_name = $image_dir. '/'. $original_svg;
+    my $source = $togopic_root. $doi. ".html";
+    my $other_info = length($tax_id) > 0 ? "Tax ID:". $tax_id : "";
+    my @tags = map {$j2e{$_}} grep {$j2e{$_}} split /,/, $tag;
+    unshift @tags, "Biology";
+    push @tags, $scientific_name if $scientific_name && $scientific_name ne "-";
+    if($tag eq "臓器"){
+	(my $another_category = $title_en) =~ s/^([a-z])/uc($1)/e;
+	$another_category =~ y/ /_/;
+	$another_category =~ s/_?\(.*$//;
+	push @tags, $another_category;
+    }
+    if($taxicon_id > 0){
+	push @tags, "Taxonomy icons by NBDC";
+    }elsif($togopic_id > 0){
+	push @tags, "Life science images from DBCLS";
+    }
+
+    uploadFile(
+    	{
+    	    "token"        => $edit_token,
+    	    "date"         => $date,
+    	    "description"  => $description,
+    	    "current_name" => $current_name,
+    	    "source"       => $source,
+    	    "original_svg" => $original_svg,
+    	    "tags"         => \@tags,
+    	    "other_information" => $other_info,
+    	    "other_version1"    => "",
+    	    "other_version2"    => "",
+    	});
+
+    setLabel($original_svg, $title_en, "en", $edit_token);
+    setLabel($original_svg, encode_utf8($title_jp), "ja", $edit_token);
+    if($tax_id ne '-'){
+	my $qid = getTaxQid($tax_id);
+	if($qid){
+	    my $eid = getEntityID($original_svg);
+	    if($eid){
+		setClaims($eid, $qid, $edit_token);
+	    }
+	}
+    } else {
+	return 0;
+    }
+    return 1;
 }
 
 sub main {
@@ -345,71 +493,15 @@ sub main {
 	next if /^#/;
 	chomp;
 	trim($_);
+	my $result_code = 0;
 	if ($csv->parse($_)) {
-	    my ($picture_id, $togopic_id, $taxicon_id, $update, $doi, $date,
-		$title_jp, $title_en, $scientific_name, $tax_id, $tag, $original_png,
-		$original_svg, $original_ai, $DatabaseArchiveURL) = $csv->fields();       
-
-	    next unless $picture_id;
-	    next if $not_upload{$picture_id};
-	    unless($original_svg){
-		warn "No svg file for the ID: ${picture_id}\n";
-		next;
-	    }
-	    $togopic_id ||= 0;
-	    $taxicon_id ||= 0;
-	    next if $taxicon_id > 0;
-	    $doi //= "";
-	    $date //= "";
-	    $title_jp //= "";
-	    $title_en //= "";
-	    $scientific_name //= "";
-	    $tax_id //= "";
-	    $tag //= "";
-	    $original_png //= "";
-	    my $description = "{{en|$title_en}}{{ja|$title_jp}}";
-	    next if downloadImage($original_svg);
-	    my $current_name = $image_dir. '/'. $original_svg;
-	    my $source = $togopic_root. $doi. ".html";
-	    my $other_info = length($tax_id) > 0 ? "Tax ID:". $tax_id : "";
-	    my @tags = map {$j2e{$_}} grep {$j2e{$_}} split /,/, $tag;
-	    unshift @tags, "Biology";
-	    push @tags, $scientific_name if $scientific_name && $scientific_name ne "-";
-	    if($tag eq "臓器"){
-		(my $another_category = $title_en) =~ s/^([a-z])/uc($1)/e;
-		$another_category =~ y/ /_/;
-		$another_category =~ s/_?\(.*$//;
-		push @tags, $another_category;
-	    }
-	    if($taxicon_id > 0){
-		push @tags, "Taxonomy icons by NBDC";
-	    }elsif($togopic_id > 0){
-		push @tags, "Life science images from DBCLS";
-	    }
-
-	    uploadFile(
-		{
-		    "token"        => $edit_token,
-		    "date"         => $date,
-		    "description"  => $description,
-		    "current_name" => $current_name,
-		    "source"       => $source,
-		    "original_svg" => $original_svg,
-		    "tags"         => \@tags,
-		    "other_information" => $other_info,
-		    "other_version1"    => "",
-		    "other_version2"    => "",
-		});
-
-	    setLabel($original_svg, $title_en, "en", $edit_token);
-	    setLabel($original_svg, encode_utf8($title_jp), "ja", $edit_token);
-
+	    $result_code = csv_parse_and_upload($edit_token, $csv);
 	} else {
 	    warn "Parse error: $_\n";
 	}
-
-	sleep 3;
-
+	if ($result_code > 0){
+	    sleep 3;
+	}
     }
 }
 
