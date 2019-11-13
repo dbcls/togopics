@@ -8,6 +8,9 @@ TogoPictureGalleryにあるイメージのうち、WikimediaCommonsに投稿し�
 * Life_science_icons_from_DBCLS
 * Life_science_images_from_DBCLS
 
+サブカテゴリには対応していません。
+API経由で取得出来るファイル情報はカテゴリ毎に最大500までという制限があり、予め特定のカテゴリに含まれるファイル数を取得する方法が不明なので、今後、対応が必要になるかも知れません。
+
 =cut
 
 use strict;
