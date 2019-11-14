@@ -5,18 +5,10 @@
 TogoPictureGalleryにあるイメージのうち、WikimediaCommonsに投稿してあるものの利用状況を取得する。
 具体的には、WikimediaCommonsの下記のカテゴリに含まれるファイルが、ウィキメディア財団の管理するプロジェクトで使われている場合に、そのデータを取得する。
 
-* Life_science_icons_from_DBCLS
-* Life_science_images_from_DBCLS
+* Life science icons from DBCLS
+* Life science images from DBCLS
 
 サブカテゴリには対応していません。
-API経由で取得出来るファイル情報やリンク数はカテゴリ毎、ファイル毎にそれぞれ最大500までという制限があり、予め特定のカテゴリに含まれるファイル数やリンク数を取得する方法が不明なので、今後、対応が必要になるかも知れません。
-下記のパラメタが鍵と思われます。
-
-list=categorymembers
-cmcontinue: When more results are available, use this to continue.
-
-prop=globalusage
-gucontinue: When more results are available, use this to continue.
 
 =cut
 
@@ -45,42 +37,15 @@ sub initBrowser {
     $browser->cookie_jar( {} );
 }
 
-# action=query&list=categorymembers&cmtitle=Category:Life_science_icons_from_DBCLS&cmlimit=max&cmtype=file&format=json
-
-sub getPageList {
+### Not used now.
+sub getFileCount {
     my $catname = shift;
     $catname = "Category:". $catname;
     my $url = URI->new( $api_url );
     $url->query_form(
 	"action" => "query",
-	"list" => "categorymembers",
-	"cmtitle"  => $catname,
-	"cmlimit" => "max",
-	"cmtype" => "file",
-	"format" => "json",
-	);
-    my $response = $browser->get($url);
-    if( $response->is_success ){
-	my $res_ref = decode_json $response->content;
-	for ( @{ $res_ref->{"query"}->{"categorymembers"} } ){
-	    getGlobalUsage($_->{"title"});
-	    sleep 0.2;
-	}
-	return;
-    }else{
-	return;
-    }
-}
-
-# action=query&prop=globalusage&titles=File:201704%20brain.svg
-sub getGlobalUsage {
-    my $fn = shift;
-    my $url = URI->new( $api_url );
-    $url->query_form(
-	"action" => "query",
-	"prop"  => "globalusage",
-	"gulimit" => "max",
-	"titles" => $fn, # eg "File:201703_tardigrade.svg"
+	"prop" => "categoryinfo",
+	"titles"  => $catname,
 	"format" => "json",
 	);
     my $response = $browser->get($url);
@@ -88,18 +53,111 @@ sub getGlobalUsage {
 	my $res_ref = decode_json $response->content;
 	my $pages_ref = $res_ref->{"query"}->{"pages"};
 	my $pageid = [ keys %{ $pages_ref } ]->[0];
-	my $usage_ref = $pages_ref->{$pageid}->{"globalusage"};
-	for ( @$usage_ref ){
-	    print join("\t", ($fn, $_->{"wiki"}, $_->{"title"}, $_->{"url"})), "\n";
-	}
-	return;
+	my $count = $pages_ref->{$pageid}->{"categoryinfo"}->{"files"};
+	return $count;
     }else{
-	return;
+	return "";
+    }
+}
+
+# action=query&list=categorymembers&cmtitle=Category:Life_science_icons_from_DBCLS&cmlimit=max&cmtype=file&format=json
+sub getPageList {
+    my $catname = shift;
+    $catname = "Category:". $catname;
+    my $cmcontinue = "";
+    my $count = 0;
+    my $max_count = 500;
+    while(1){
+	my $url = URI->new( $api_url );
+	if ($cmcontinue){
+	    $url->query_form(
+		"action" => "query",
+		"list" => "categorymembers",
+		"cmtitle"  => $catname,
+		"cmlimit" => $max_count,
+		"cmcontinue" => $cmcontinue,
+		"cmtype" => "file",
+		"format" => "json",
+		);
+	} else {
+	    $url->query_form(
+		"action" => "query",
+		"list" => "categorymembers",
+		"cmtitle"  => $catname,
+		"cmlimit" => $max_count,
+		"cmtype" => "file",
+		"format" => "json",
+		);
+	}
+	my $total = 0;
+	my $response = $browser->get($url);
+	if( $response->is_success ){
+	    my $res_ref = decode_json $response->content;
+	    my $iscontinue = $res_ref->{"continue"};
+	    if (defined $iscontinue){
+		$cmcontinue = $iscontinue->{"cmcontinue"};
+	    }
+	    for ( @{ $res_ref->{"query"}->{"categorymembers"} } ){
+		$total++;
+		getGlobalUsage($_->{"title"});
+	    }
+	}else{
+	}
+	last if $total < $max_count;
+	sleep 0.2;
+    }
+}
+
+# action=query&prop=globalusage&titles=File:201704%20brain.svg
+sub getGlobalUsage {
+    my $fn = shift;
+    my $gucontinue = "";
+    my $count = 0;
+    my $max_count = 500;
+    while(1){
+	my $url = URI->new( $api_url );
+	if ($gucontinue){
+	    $url->query_form(
+		"action" => "query",
+		"prop"  => "globalusage",
+		"gulimit" => $max_count,
+		"gucontinue" => $gucontinue,
+		"titles" => $fn, # eg "File:201703_tardigrade.svg"
+		"format" => "json",
+		);
+	} else {
+	    $url->query_form(
+		"action" => "query",
+		"prop"  => "globalusage",
+		"gulimit" => $max_count,
+		"titles" => $fn,
+		"format" => "json",
+		);
+	}
+	my $total = 0;
+	my $response = $browser->get($url);
+	if( $response->is_success ){
+	    my $res_ref = decode_json $response->content;
+	    my $iscontinue = $res_ref->{"continue"};
+	    if (defined $iscontinue){
+		$gucontinue = $iscontinue->{"gucontinue"};
+	    }
+	    my $pages_ref = $res_ref->{"query"}->{"pages"};
+	    my $pageid = [ keys %{ $pages_ref } ]->[0];
+	    my $usage_ref = $pages_ref->{$pageid}->{"globalusage"};
+	    $total = scalar @$usage_ref;
+	    for ( @$usage_ref ){
+		print join("\t", ($fn, $_->{"wiki"}, $_->{"title"}, $_->{"url"})), "\n";
+	    }
+	}else{
+	}
+	last if $total < $max_count;
+	sleep 0.2;
     }
 }
 
 initBrowser();
-getPageList("Life_science_icons_from_DBCLS");
-getPageList("Life_science_images_from_DBCLS");
+getPageList("Life science icons from DBCLS");
+getPageList("Life science images from DBCLS");
 
 __END__
