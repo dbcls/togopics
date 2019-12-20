@@ -194,7 +194,6 @@ sub getEntityID {
     }
 }
 
-
 # https://commons.wikimedia.org/w/api.php?action=wbgetclaims&entity=M57116616
 sub getClaims {
     my $eid = shift;
