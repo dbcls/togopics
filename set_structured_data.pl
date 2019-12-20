@@ -304,16 +304,20 @@ sub getClaims {
     $url->query_form(
 	"action" => "wbgetclaims",
 	"entity" => $eid,
+	"format" => "json",
 	);
     my $response = $browser->get($url);
     if( $response->is_success ){
 	my $res_ref = decode_json $response->content;
-	return [ keys %{$res_ref->{"entities"}} ]->[0];
+	if (my $claims = $res_ref->{'claims'}){
+	    return $claims;
+	}elsif (defined($res_ref->{'error'})){
+	    return "";
+	}
     }else{
-	die "Get error: $!\n";
+	return "";
     }
 }
-
 
 sub existClaim {
     my $eid = shift;
