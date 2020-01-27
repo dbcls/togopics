@@ -312,10 +312,10 @@ sub getClaims {
 	if (my $claims = $res_ref->{'claims'}){
 	    return $claims;
 	}elsif (defined($res_ref->{'error'})){
-	    return "";
+	    return undef;
 	}
     }else{
-	return "";
+	return undef;
     }
 }
 
@@ -324,6 +324,9 @@ sub existClaim {
     my $pid = shift;
     my $qid = shift;
     my $claims = getClaims($eid);
+    if(! defined($claims)){
+      return 0;
+    }
     while(my ($k, $v) = each %$claims){
 	next if $k ne $pid;
 	for my $value ( @{ $claims->{$k} } ){
