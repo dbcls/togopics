@@ -89,6 +89,10 @@ sub downloadImage {
 	return 1;
     }
     $ftp->quit;
+    if( -z $image_dir. "/". $_[0] ){
+        print "File size is zero: ". $image_dir. "/". $_[0]. "\n";
+        return 1;
+    }
     return 0;
 }
 
@@ -320,13 +324,9 @@ sub getTaxQid {
 sub uploadFile {
 
     my $p = shift;
-
     open (my $log, ">>", "log.txt");
-
     my $full_description = $p->{"description"};
-
     my $mastercategory = join("\n", map {"[[Category:$_]]"} @{$p->{tags}});
-
     $mastercategory .= "\n\n";
 
 #Other versions
