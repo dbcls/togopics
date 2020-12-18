@@ -16,7 +16,7 @@ client = gspread.authorize(creds)
 sheet = client.open(u"2020統合TV番組原簿").worksheet("Pictures")
 
 writer = csv.writer(sys.stdout)
-header = sheet.row_values(1)[0:19]
+header = sheet.row_values(1)[0:30]
 writer.writerow(header)
 list_of_hashes = sheet.get_all_records()
 
