@@ -12,7 +12,8 @@ import unicodecsv as csv
 scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
 creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json', scope)
 client = gspread.authorize(creds)
-sheet = client.open(u"統合TV番組原簿 20150701").worksheet("Pictures")
+# sheet = client.open(u"統合TV番組原簿 20150701").worksheet("Pictures")
+sheet = client.open(u"2020統合TV番組原簿").worksheet("Pictures")
 
 writer = csv.writer(sys.stdout)
 header = sheet.row_values(1)[0:19]

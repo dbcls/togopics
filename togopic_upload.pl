@@ -409,8 +409,12 @@ sub csv_parse_and_upload {
     my $edit_token = shift;
     my $csv = shift;
     my ($picture_id, $togopic_id, $taxicon_id, $update, $doi, $date,
-	$title_jp, $title_en, $scientific_name, $tax_id, $tag, $original_png,
-	$original_svg, $original_ai, $DatabaseArchiveURL) = $csv->fields();       
+	$title_jp, $title_en, $scientific_name, $tax_id, $old_tag,
+	$taxon1, $taxon2, $taxon3, $model_organism, $other_tags, $other_tags_comma,
+	$other_tag1, $other_tag2, $other_tag3, $publisher, $author, $editor,
+	$lincense, $original_png, $original_svg, $original_ai,
+	$mtl, $apng, $rotation
+	) = $csv->fields();       
 
     return 0 unless $picture_id;
     return 0 if $not_upload{$picture_id};
@@ -428,17 +432,16 @@ sub csv_parse_and_upload {
     $title_en //= "";
     $scientific_name //= "";
     $tax_id //= "";
-    $tag //= "";
+    $old_tag //= "";
     $original_png //= "";
     my $description = "{{en|$title_en}}{{ja|$title_jp}}";
     return 0 if downloadImage($original_svg);
     my $current_name = $image_dir. '/'. $original_svg;
-    my $source = $togopic_root. $doi. ".html";
     my $other_info = length($tax_id) > 0 ? "Tax ID:". $tax_id : "";
-    my @tags = map {$j2e{$_}} grep {$j2e{$_}} split /,/, $tag;
+    my @tags = map {$j2e{$_}} grep {$j2e{$_}} split /,/, $old_tag;
     unshift @tags, "Biology";
     push @tags, $scientific_name if $scientific_name && $scientific_name ne "-";
-    if($tag eq "臓器"){
+    if($old_tag eq "臓器"){
 	(my $another_category = $title_en) =~ s/^([a-z])/uc($1)/e;
 	$another_category =~ y/ /_/;
 	$another_category =~ s/_?\(.*$//;
@@ -456,7 +459,7 @@ sub csv_parse_and_upload {
     	    "date"         => $date,
     	    "description"  => $description,
     	    "current_name" => $current_name,
-    	    "source"       => $source,
+    	    "source"       => $doi,
     	    "original_svg" => $original_svg,
     	    "tags"         => \@tags,
     	    "other_information" => $other_info,
