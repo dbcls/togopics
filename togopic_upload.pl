@@ -84,10 +84,11 @@ sub downloadImage {
 	return 1;
     }
     unless($ftp->get($_[0], $image_dir. "/". $_[0])){
-	print "get failed ($_[0]): ", $ftp->message;
+	print "Get failed ($_[0]): ", $ftp->message;
 	$ftp->quit;
 	return 1;
     }
+    print "Got $_[0],\n";
     $ftp->quit;
     if( -z $image_dir. "/". $_[0] ){
         print "File size is zero: ". $image_dir. "/". $_[0]. "\n";
