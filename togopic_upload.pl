@@ -32,6 +32,8 @@ use FindBin qw($Bin);
 use Text::Trim;
 use RDF::Trine::Store::SPARQL;
 use Data::Dumper;
+use File::stat;
+use Fcntl qw/:mode/;
 use constant EP => "https://query.wikidata.org/sparql";
 
 binmode STDOUT, ":utf8";
@@ -67,6 +69,17 @@ sub setupJEdictionary {
 }
 
 sub downloadImage {
+    if( -d $image_dir ){
+        my $sb = stat($image_dir);
+        my $user_rwx = ($sb->mode & S_IRWXU);
+        if ($user_rwx != 448){
+            print "Directory ${image_dir}: no write permission.\n";
+            return 1;
+        }
+    } else {
+        print "Directory ${image_dir} doesn't exist.\n";
+        return 1;
+    }
     my $ftp;
     unless($ftp = Net::FTP->new($togopic_ftphost, Debug => 0, Passive => 1)){
 	print "Cannot connect to $togopic_ftphost: $@";
