@@ -162,6 +162,10 @@ sub editPage {
     my $title = "File:${svg}";
     print $title, "\n";
     my $source = getContent($title);
+    if (index($source, $doi) > -1){
+        print "既にdoiが反映されています。\n";
+        return 
+    }
     substr($source, index($source, $surl), length($surl), $doi);
     print $source, "\n\n";
 
