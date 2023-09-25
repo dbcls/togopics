@@ -7,6 +7,8 @@ from a Wikidata entry to which the WikimediaCommons one points using P180 ("depi
 Prerequisites:
 There is already a link from a WikimediaCommons entry to a Wikidata one with the property of P180.
 
+$ cut -f10,26 Original_Pictures.tsv > pictures.tsv
+
 Yasunori Yamamoto @ Database Center for Life Science
 
 このファイルはUTF-8エンコードされた文字を含みます。
@@ -33,7 +35,7 @@ my $ua = "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:22.0) Gecko/20100101 Firefo
 my $wb_api_url = "https://commons.wikimedia.org/w/api.php";
 my $wd_api_url = "https://www.wikidata.org/w/api.php";
 my $author = "DataBase Center for Life Science (DBCLS)";
-my $pictures = "pictures.tsv";
+my $pictures = "Pictures.tsv";
 
 &main;
 
@@ -416,10 +418,11 @@ sub setWdClaim {
 }
 
 sub getFiles {
+    my $edit_token = shift;
     open(my $fh, $pictures);
     while(<$fh>){
         chomp;
-        my ($tax_id, $filename) = split /\t/;
+        my ($tax_id, $filename, $primary) = split /\t/;
         next if $tax_id !~ /^\d+$/;
         next if $filename !~ /^\d+_/;
         next if $tax_id eq "9606";
@@ -428,12 +431,21 @@ sub getFiles {
         if( $eid ){
             $claims = getWbDepictsClaims( $eid );
         }
-        print join("\t", ($tax_id, $filename, $eid, join(",", @$claims))), "\n";
+        $primary //= 0;
+        print join("\t", ($tax_id, $filename, $eid, $primary, join(",", @$claims))), "\n";
 #        $filename =~ tr/_/ /;
 #        for my $c ( @$claims ){
 #            my $links = getWdClaims($c, "P18");
 #            print join("\n", map { " ". $_->{'id'}. ":". $_->{'mainsnak'}->{'datavalue'}->{'value'} } @$links), "\n";
 #        }
+        if ( $primary ){
+            for my $_qid ( @$claims ){
+                (my $_filename = $filename) =~ tr/_/ /;
+                print join(" ", (">>>", $_qid, '"'. $_filename. '"')), "\n";
+                setWdClaim($_qid, $_filename, $edit_token);
+            }
+        }
+
         sleep 0.4;
     }
     close($fh);
@@ -442,8 +454,8 @@ sub getFiles {
 sub main {
 
     &initBrowser;
-    &getFiles();
-#    my $edit_token = &loginAndGetToken;
+    my $edit_token = &loginAndGetToken;
+    &getFiles($edit_token);
 #    setWdClaim("Q938020", "201611 melitaea cinxia sacarina.svg", $edit_token);
 
 }
