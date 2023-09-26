@@ -31,11 +31,12 @@ binmode STDOUT, ":utf8";
 binmode STDERR, ":utf8";
 
 my $browser;
-my $ua = "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:22.0) Gecko/20100101 Firefox/22.0";
+my $ua = 'TogoPicUploader/1.0 (https://www.dbcls.rois.ac.jp/; support AT dbcls.rois.ac.jp)'; 
 my $wb_api_url = "https://commons.wikimedia.org/w/api.php";
 my $wd_api_url = "https://www.wikidata.org/w/api.php";
 my $author = "DataBase Center for Life Science (DBCLS)";
 my $pictures = "Pictures.tsv";
+my $maxlag = 5;
 
 &main;
 
@@ -296,6 +297,7 @@ sub existWdClaim {
     my $qid = shift;
     my $filename = shift; # e.g., "202111 Asiatic hard clam.svg"
     my $claims = getWdClaims($qid, "P18");
+    $claims ||= [];
     for my $c ( @$claims ){
         if( $c->{'mainsnak'}->{'datavalue'}->{'value'} eq $filename ){
             return 1;
@@ -333,14 +335,16 @@ sub setWdQualifier {
             "snaktype" => "value",
             "value"    => $value,
             "token"    => $edit_token,
+            "maxlag"   => $maxlag,
             "format"   => "json",
         ]);
+    sleep 5.0;
     if( $response->is_success ){
         my $res_ref = decode_json $response->content;
 	    if( $res_ref->{'success'} ){
 	        print "setQualifier [${cid}]->[${property}]: ${value}\n";
 	    }elsif( defined($res_ref->{'error'}) ){
-	        print "Error [$cid]: ", $res_ref->{'error'}->{'info'}, "\n";
+	        print "Error [$cid]: ", $res_ref->{'error'}->{'info'}, " | ", $res_ref->{'error'}->{'*'}, "\n";
 	    }else{
 	        print Dumper $res_ref, "\n";
 	    }
@@ -386,8 +390,10 @@ sub setWdClaim {
 	        "summary"  => "Posted an image data.",
 	        "token"    => $edit_token,
 	        "format"   => "json",
+            "maxlag"   => $maxlag,
             "formatversion" => "2"
 	    ]);
+    sleep 5.0;
     if( $response->is_success ){
         my $res_ref = decode_json $response->content;
 	    if ( $res_ref->{'success'} ){
@@ -396,18 +402,20 @@ sub setWdClaim {
             my $value = encode_json {
                 "entity-type" => "item",
                 "numeric-id"  => 20007257,
+                "maxlag"      => $maxlag,
                 "id"          => "Q20007257"
             };
             setWdQualifier( $cid, "P275", $value, $edit_token ); # license
             (my $caption_string = $filename) =~ s/\.svg$//;
             $caption_string =~ s/^\d+ //;
             $value = encode_json {
+                "maxlag"   => $maxlag,
                 "text"     => "Illustration of ${caption_string}.",
                 "language" => "en"
             };
             setWdQualifier( $cid, "P2096", $value, $edit_token ); # caption
 	    }elsif( defined($res_ref->{'error'}) ){
-	        print "Error [$qid]: ", $res_ref->{'error'}->{'info'}, "\n";
+	        print "Error [$qid]: ", $res_ref->{'error'}->{'info'}, " | ", $res_ref->{'error'}->{'*'}, "\n";
 	    }else{
 	        print Dumper $res_ref, "\n";
 	    }
@@ -426,27 +434,22 @@ sub getFiles {
         next if $tax_id !~ /^\d+$/;
         next if $filename !~ /^\d+_/;
         next if $tax_id eq "9606";
+
+        $primary //= 0;
+        next unless $primary;
+
         my $eid = getWbEntityID( $filename );
         my $claims = [];
         if( $eid ){
             $claims = getWbDepictsClaims( $eid );
         }
-        $primary //= 0;
         print join("\t", ($tax_id, $filename, $eid, $primary, join(",", @$claims))), "\n";
-#        $filename =~ tr/_/ /;
-#        for my $c ( @$claims ){
-#            my $links = getWdClaims($c, "P18");
-#            print join("\n", map { " ". $_->{'id'}. ":". $_->{'mainsnak'}->{'datavalue'}->{'value'} } @$links), "\n";
-#        }
-        if ( $primary ){
-            for my $_qid ( @$claims ){
-                (my $_filename = $filename) =~ tr/_/ /;
-                print join(" ", (">>>", $_qid, '"'. $_filename. '"')), "\n";
-                setWdClaim($_qid, $_filename, $edit_token);
-            }
+        for my $_qid ( @$claims ){
+            (my $_filename = $filename) =~ tr/_/ /;
+            print join(" ", (">>>", $_qid, '"'. $_filename. '"')), "\n";
+            setWdClaim($_qid, $_filename, $edit_token);
+            sleep 5.0;
         }
-
-        sleep 0.4;
     }
     close($fh);
 }
