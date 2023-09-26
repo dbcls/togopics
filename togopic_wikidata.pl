@@ -380,10 +380,10 @@ sub setWdClaim {
 	    Content => [
             "action"   => "wbcreateclaim",
 	        "entity"   => $qid,
-	        "property" => "P18",
+	        "property" => "P18", # image
 	        "snaktype" => "value",
 	        "value"    => $vfn,
-	        "summary"  => "Added image data.",
+	        "summary"  => "Posted an image data.",
 	        "token"    => $edit_token,
 	        "format"   => "json",
             "formatversion" => "2"
@@ -398,14 +398,14 @@ sub setWdClaim {
                 "numeric-id"  => 20007257,
                 "id"          => "Q20007257"
             };
-            setWdQualifier( $cid, "P275", $value, $edit_token );
+            setWdQualifier( $cid, "P275", $value, $edit_token ); # license
             (my $caption_string = $filename) =~ s/\.svg$//;
             $caption_string =~ s/^\d+ //;
             $value = encode_json {
                 "text"     => "Illustration of ${caption_string}.",
                 "language" => "en"
             };
-            setWdQualifier( $cid, "P2096", $value, $edit_token );
+            setWdQualifier( $cid, "P2096", $value, $edit_token ); # caption
 	    }elsif( defined($res_ref->{'error'}) ){
 	        print "Error [$qid]: ", $res_ref->{'error'}->{'info'}, "\n";
 	    }else{
@@ -422,7 +422,7 @@ sub getFiles {
     open(my $fh, $pictures);
     while(<$fh>){
         chomp;
-        my ($tax_id, $filename, $primary) = split /\t/;
+        my ($tax_id, $filename, $primary) = split /\t/; # primary is "1" if this should be uploaded to Wikidata
         next if $tax_id !~ /^\d+$/;
         next if $filename !~ /^\d+_/;
         next if $tax_id eq "9606";
