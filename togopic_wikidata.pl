@@ -12,6 +12,12 @@ $ cut -f10,26 Original_Pictures.tsv > pictures.tsv
 Yasunori Yamamoto @ Database Center for Life Science
 
 このファイルはUTF-8エンコードされた文字を含みます。
+
+References
+* https://www.wikidata.org/w/api.php?action=wbgetclaims&entity=Q5194&property=P18
+* https://www.wikidata.org/w/api.php?action=wbgetclaims&entity=Q1704&property=P18
+* https://www.wikidata.org/w/api.php?action=wbgetclaims&entity=Q156606&property=P18
+
 =cut
 
 use strict;
